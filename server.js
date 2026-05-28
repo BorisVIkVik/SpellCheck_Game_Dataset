@@ -3,8 +3,8 @@ const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
 
-const HOST = "127.0.0.1";
-const PORT = 3000;
+const HOST = "0.0.0.0";
+const PORT = Number(process.env.PORT || 3000);
 
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
