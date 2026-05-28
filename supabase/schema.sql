@@ -10,5 +10,15 @@ create table if not exists public.typo_samples (
 create index if not exists typo_samples_created_at_idx
   on public.typo_samples (created_at desc);
 
--- Сервер пишет через service_role key (RLS можно не включать для этой таблицы
+-- Эталонные предложения для игры
+create table if not exists public.source_sentences (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  text text not null unique
+);
+
+create index if not exists source_sentences_created_at_idx
+  on public.source_sentences (created_at desc);
+
+-- Сервер пишет через service_role key (RLS можно не включать для этих таблиц
 -- или включить и не давать публичный доступ — только backend).

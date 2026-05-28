@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Импорт предложений</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <h1>Импорт предложений</h1>
+
+      <section class="card instruction">
+        <p class="instruction-text">
+          Загрузи текстовый файл (.txt). Текст будет разбит на предложения и добавлен в
+          Supabase. Не добавляются строки с английским, ссылками и нестандартными символами.
+        </p>
+      </section>
+
+      <section class="card">
+        <label class="label" for="token">Токен (EXPORT_TOKEN)</label>
+        <input id="token" class="input" type="password" autocomplete="off" />
+
+        <label class="label" for="file">Текстовый файл</label>
+        <input id="file" class="input" type="file" accept=".txt,text/plain" />
+
+        <button id="uploadBtn" type="button">Загрузить в базу</button>
+        <p id="status" class="status"></p>
+      </section>
+
+      <p><a href="/">← Вернуться к игре</a></p>
+    </main>
+
+    <script src="/admin.js"></script>
+  </body>
+</html>

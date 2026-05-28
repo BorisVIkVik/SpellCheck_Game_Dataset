@@ -4,35 +4,16 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
-const {
-  saveSample,
-  fetchAllSamples,
-  useSupabase,
-  getStorageInfo,
-} = require("./lib/dataset");
+const { saveSample, fetchAllSamples, getStorageInfo } = require("./lib/dataset");
+const { useSupabase } = require("./lib/supabase");
+const { loadSentenceTexts, importText } = require("./lib/sentences");
 
 const HOST = "0.0.0.0";
 const PORT = Number(process.env.PORT || 3000);
 const EXPORT_TOKEN = process.env.EXPORT_TOKEN || "";
 
-const ROOT_DIR = __dirname;
-const PUBLIC_DIR = path.join(ROOT_DIR, "public");
-const SENTENCES_FILE = path.join(ROOT_DIR, "sentences.txt");
+const PUBLIC_DIR = path.join(__dirname, "public");
 const issuedSentences = new Set();
-
-function loadSentences() {
-  if (!fs.existsSync(SENTENCES_FILE)) {
-    return [];
-  }
-
-  const lines = fs
-    .readFileSync(SENTENCES_FILE, "utf8")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  return lines;
-}
 
 function getNextSentenceWithoutRepeat(sentences) {
   if (sentences.length === 0) return null;
@@ -76,12 +57,12 @@ function sendDownload(res, statusCode, body, filename, contentType) {
   res.end(body, "utf8");
 }
 
-function parseBody(req) {
+function parseBody(req, maxBytes = 1_000_000) {
   return new Promise((resolve, reject) => {
     let data = "";
     req.on("data", (chunk) => {
       data += chunk;
-      if (data.length > 1_000_000) {
+      if (data.length > maxBytes) {
         reject(new Error("Payload too large"));
       }
     });
@@ -92,6 +73,20 @@ function parseBody(req) {
         reject(new Error("Invalid JSON"));
       }
     });
+    req.on("error", reject);
+  });
+}
+
+function parseTextBody(req, maxBytes = 5_000_000) {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    req.on("data", (chunk) => {
+      data += chunk;
+      if (Buffer.byteLength(data, "utf8") > maxBytes) {
+        reject(new Error("Payload too large"));
+      }
+    });
+    req.on("end", () => resolve(data));
     req.on("error", reject);
   });
 }
@@ -128,7 +123,7 @@ function serveStatic(reqPath, res) {
   res.end(content);
 }
 
-function isExportAuthorized(url) {
+function isAdminAuthorized(url) {
   if (!EXPORT_TOKEN) return false;
   return url.searchParams.get("token") === EXPORT_TOKEN;
 }
@@ -137,23 +132,50 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   if (req.method === "GET" && url.pathname === "/api/next-sentence") {
-    const sentences = loadSentences();
-    if (sentences.length === 0) {
-      sendJson(res, 500, { error: "No sentences in sentences.txt" });
+    try {
+      const sentences = await loadSentenceTexts();
+      if (sentences.length === 0) {
+        sendJson(res, 500, {
+          error: "No sentences in database. Import text via /admin.html",
+        });
+        return;
+      }
+
+      const sentence = getNextSentenceWithoutRepeat(sentences);
+      if (!sentence) {
+        sendJson(res, 500, { error: "Failed to pick next sentence" });
+        return;
+      }
+      sendJson(res, 200, { sentence });
+    } catch (err) {
+      sendJson(res, 500, { error: err.message || "Failed to load sentences" });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/sentences/import") {
+    if (!isAdminAuthorized(url)) {
+      sendJson(res, 401, { error: "Unauthorized" });
       return;
     }
 
-    const sentence = getNextSentenceWithoutRepeat(sentences);
-    if (!sentence) {
-      sendJson(res, 500, { error: "Failed to pick next sentence" });
-      return;
+    try {
+      const text = await parseTextBody(req);
+      if (!text.trim()) {
+        sendJson(res, 400, { error: "Empty text" });
+        return;
+      }
+
+      const result = await importText(text);
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      sendJson(res, 400, { error: err.message || "Import failed" });
     }
-    sendJson(res, 200, { sentence });
     return;
   }
 
   if (req.method === "GET" && url.pathname === "/api/export-dataset") {
-    if (!isExportAuthorized(url)) {
+    if (!isAdminAuthorized(url)) {
       sendJson(res, 401, { error: "Unauthorized" });
       return;
     }
@@ -226,6 +248,7 @@ server.listen(PORT, HOST, () => {
     );
   }
   if (EXPORT_TOKEN) {
-    console.log("Export enabled: GET /api/export-dataset?token=...&format=json|jsonl");
+    console.log("Admin: /admin.html (import sentences)");
+    console.log("Export: GET /api/export-dataset?token=...&format=json|jsonl");
   }
 });

@@ -4,7 +4,8 @@
   "description": "Blind typing game to collect typo dataset",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "seed:sentences": "node scripts/seed-sentences.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",

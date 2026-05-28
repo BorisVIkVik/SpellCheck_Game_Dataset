@@ -3,14 +3,18 @@
 ## Supabase
 
 1. Создай проект на [supabase.com](https://supabase.com).
-2. **SQL Editor** → вставь и выполни `supabase/schema.sql`.
+2. **SQL Editor** → выполни `supabase/schema.sql` (таблицы `typo_samples` и `source_sentences`).
 3. **Project Settings → API**:
    - `Project URL` → `SUPABASE_URL`
-   - `service_role` key (secret) → `SUPABASE_SERVICE_ROLE_KEY`
+   - `service_role` key → `SUPABASE_SERVICE_ROLE_KEY`
 4. Скопируй `.env.example` в `.env` и заполни переменные.
-5. На Render добавь те же переменные в **Environment**.
+5. Перенеси стартовые предложения из `sentences.txt`:
 
-Без Supabase записи пишутся в `data/typo_dataset.jsonl` (локальный fallback).
+```bash
+node scripts/seed-sentences.js
+```
+
+6. На Render добавь те же переменные в **Environment**.
 
 ## Запуск
 
@@ -19,18 +23,30 @@ npm install
 npm start
 ```
 
-## Экспорт датасета
+Игра: `http://localhost:3000`  
+Импорт предложений: `http://localhost:3000/admin.html` (нужен `EXPORT_TOKEN` в `.env`).
 
-Задай `EXPORT_TOKEN` в `.env`, затем:
+## Пополнение списка предложений
+
+1. Открой `/admin.html`.
+2. Введи `EXPORT_TOKEN`.
+3. Загрузи `.txt` файл — текст разбивается по `.!?…` и переносам строк.
+4. Новые предложения попадают в таблицу `source_sentences` (дубликаты не добавляются).
+
+Или через API:
 
 ```bash
-# JSON-массив
-curl -o typo_dataset.json \
-  "http://localhost:3000/api/export-dataset?token=YOUR_TOKEN&format=json"
-
-# JSONL
-curl -o typo_dataset.jsonl \
-  "http://localhost:3000/api/export-dataset?token=YOUR_TOKEN&format=jsonl"
+curl -X POST \
+  "http://localhost:3000/api/sentences/import?token=YOUR_TOKEN" \
+  -H "Content-Type: text/plain; charset=utf-8" \
+  --data-binary @my_text.txt
 ```
 
-В Supabase данные также видны в **Table Editor → typo_samples**.
+## Экспорт датасета опечаток
+
+```bash
+curl -o typo_dataset.json \
+  "http://localhost:3000/api/export-dataset?token=YOUR_TOKEN&format=json"
+```
+
+Данные также в **Table Editor**: `typo_samples`, `source_sentences`.

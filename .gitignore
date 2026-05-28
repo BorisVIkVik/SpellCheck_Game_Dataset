@@ -1,3 +1,4 @@
 node_modules/
+tools/pdf-to-txt/.venv/
 .env
 data/
