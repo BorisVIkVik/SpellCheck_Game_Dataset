@@ -65,15 +65,9 @@ h1 {
 
 /* Группировка только для вёрстки; строка для ввода не меняется */
 .target-word {
-  display: inline;
-}
-
-@media (max-width: 900px) {
-  .target-word {
-    display: inline-block;
-    max-width: 100%;
-    vertical-align: top;
-  }
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
 }
 
 /* Прозрачное поле поверх текста — на телефоне открывает клавиатуру */
@@ -155,6 +149,18 @@ button:focus-visible {
   margin: 10px 0 0;
   min-height: 1.2rem;
   color: #8de7a5;
+}
+
+.last-typed-card {
+  border-color: #3d5a40;
+}
+
+.last-typed {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.45;
+  color: #b8c9f0;
+  overflow-wrap: anywhere;
 }
 
 .input {

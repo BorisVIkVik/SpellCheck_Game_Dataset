@@ -9,6 +9,8 @@ const nextBtn = document.getElementById("nextBtn");
 const gameEl = document.getElementById("game");
 const typingInput = document.getElementById("typingInput");
 const typingCard = document.getElementById("typingCard");
+const lastTypedCard = document.getElementById("lastTypedCard");
+const lastTypedEl = document.getElementById("lastTyped");
 const PLAYER_ID_KEY = "typo_game_player_id";
 
 function createPlayerId() {
@@ -63,6 +65,16 @@ function clearTypingInput() {
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.style.color = isError ? "#ff9b9b" : "#8de7a5";
+}
+
+function showLastSubmitted(typed) {
+  if (!typed) {
+    lastTypedCard.hidden = true;
+    lastTypedEl.textContent = "";
+    return;
+  }
+  lastTypedEl.textContent = typed;
+  lastTypedCard.hidden = false;
 }
 
 function escapeHtml(text) {
@@ -156,13 +168,9 @@ async function processInputValue() {
 }
 
 async function loadNextSentence() {
-  if (isSubmitting) return;
-
   setStatus("Загрузка предложения...");
   typedSentence = "";
-  currentSentence = "";
   clearTypingInput();
-  renderMasked();
 
   try {
     const res = await fetch("/api/next-sentence");
@@ -193,7 +201,8 @@ async function submitTypedSentence() {
       }),
     });
     if (!res.ok) throw new Error("Ошибка сохранения");
-    setStatus("Сохранено в датасет. Загружаю следующее...");
+    showLastSubmitted(typedSentence);
+    setStatus("Сохранено. Загружаю следующее...");
     await loadNextSentence();
   } catch (err) {
     setStatus(err.message, true);
@@ -268,7 +277,8 @@ typingCard.addEventListener("click", () => {
 
 nextBtn.addEventListener("mousedown", (event) => event.preventDefault());
 nextBtn.addEventListener("click", () => {
-  loadNextSentence();
+  if (isSubmitting) return;
+  void loadNextSentence();
 });
 
 loadNextSentence();
