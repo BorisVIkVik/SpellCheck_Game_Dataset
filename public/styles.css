@@ -60,8 +60,20 @@ h1 {
   margin: 0;
   font-size: 1.25rem;
   line-height: 1.5;
-  overflow-wrap: anywhere;
   pointer-events: none;
+}
+
+/* Группировка только для вёрстки; строка для ввода не меняется */
+.target-word {
+  display: inline;
+}
+
+@media (max-width: 900px) {
+  .target-word {
+    display: inline-block;
+    max-width: 100%;
+    vertical-align: top;
+  }
 }
 
 /* Прозрачное поле поверх текста — на телефоне открывает клавиатуру */

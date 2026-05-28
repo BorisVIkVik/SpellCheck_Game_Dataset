@@ -74,6 +74,17 @@ function escapeHtml(text) {
     .replaceAll("'", "&#039;");
 }
 
+function renderCharSpan(ch, idx, activeIndex) {
+  const safe = escapeHtml(ch === " " ? "\u00A0" : ch);
+  let className = "target-char";
+  if (idx < activeIndex) {
+    className += " target-char--done";
+  } else if (idx === activeIndex) {
+    className += " target-char--active";
+  }
+  return `<span class="${className}">${safe}</span>`;
+}
+
 function renderTargetWithActiveChar() {
   if (!currentSentence) {
     targetEl.textContent = "Пустое предложение";
@@ -81,18 +92,26 @@ function renderTargetWithActiveChar() {
   }
 
   const activeIndex = typedSentence.length;
-  const chars = [...currentSentence].map((ch, idx) => {
-    const safe = escapeHtml(ch === " " ? "\u00A0" : ch);
-    if (idx < activeIndex) {
-      return `<span class="target-char target-char--done">${safe}</span>`;
-    }
-    if (idx === activeIndex) {
-      return `<span class="target-char target-char--active">${safe}</span>`;
-    }
-    return `<span class="target-char">${safe}</span>`;
-  });
+  const chars = [...currentSentence];
+  let html = "";
+  let i = 0;
 
-  targetEl.innerHTML = chars.join("");
+  while (i < chars.length) {
+    if (chars[i] === " ") {
+      html += renderCharSpan(chars[i], i, activeIndex);
+      i += 1;
+      continue;
+    }
+
+    let wordHtml = "";
+    while (i < chars.length && chars[i] !== " ") {
+      wordHtml += renderCharSpan(chars[i], i, activeIndex);
+      i += 1;
+    }
+    html += `<span class="target-word">${wordHtml}</span>`;
+  }
+
+  targetEl.innerHTML = html;
 }
 
 function renderMasked() {
