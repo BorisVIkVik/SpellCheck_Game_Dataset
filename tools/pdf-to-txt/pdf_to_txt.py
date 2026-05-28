@@ -48,6 +48,43 @@ WIKISOURCE_FOOTER_FALLBACKS = [
     re.compile(r"wikisource\.org/wiki/викитека:форум", re.IGNORECASE),
 ]
 
+URL_RE = re.compile(
+    r"https?://|www\.|wikisource|creativecommons|\.(?:org|com|ru|html)\b",
+    re.IGNORECASE,
+)
+LATIN_RE = re.compile(r"[a-zA-Z]")
+DISALLOWED_CHAR_RE = re.compile(
+    r"[^\u0400-\u04FF0-9\s.,!?…—–\-«»„\"\"''():;\[\]№%]"
+)
+
+
+def sanitize_line(line: str) -> str | None:
+    """Оставляет только кириллицу, цифры и знаки препинания."""
+    trimmed = line.strip()
+    if not trimmed:
+        return ""
+
+    if URL_RE.search(trimmed) or LATIN_RE.search(trimmed):
+        return None
+
+    cleaned = DISALLOWED_CHAR_RE.sub("", trimmed)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+
+    if not cleaned or not re.search(r"[\u0400-\u04FF]", cleaned):
+        return None
+
+    return cleaned
+
+
+def sanitize_text(text: str) -> str:
+    lines: list[str] = []
+    for line in text.split("\n"):
+        row = sanitize_line(line)
+        if row is None:
+            continue
+        lines.append(row)
+    return "\n".join(lines)
+
 
 def extract_text_from_pdf(pdf_path: Path) -> str:
     doc = fitz.open(pdf_path)
@@ -134,6 +171,7 @@ def convert_pdf(pdf_path: Path, output_path: Path | None = None) -> Path:
     text = strip_wikisource_header(text)
     text = strip_wikisource_footer(text)
     text = strip_trailing_noise(text)
+    text = sanitize_text(text)
 
     out.write_text(text + ("\n" if text else ""), encoding="utf-8")
     return out
