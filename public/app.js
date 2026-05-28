@@ -3,19 +3,12 @@ let typedSentence = "";
 let isSubmitting = false;
 
 const targetEl = document.getElementById("target");
-const maskedEl = document.getElementById("masked");
-const progressEl = document.getElementById("progress");
 const statusEl = document.getElementById("status");
 const nextBtn = document.getElementById("nextBtn");
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.style.color = isError ? "#ff9b9b" : "#8de7a5";
-}
-
-function visibleCharMask(ch) {
-  if (ch === " ") return " ";
-  return "•";
 }
 
 function escapeHtml(text) {
@@ -49,11 +42,6 @@ function renderTargetWithActiveChar() {
 }
 
 function renderMasked() {
-  const typedMask = [...typedSentence].map(visibleCharMask).join("");
-  const remaining = currentSentence.length - typedSentence.length;
-  const placeholders = remaining > 0 ? "_".repeat(remaining) : "";
-  maskedEl.textContent = typedMask + placeholders;
-  progressEl.textContent = `${typedSentence.length} / ${currentSentence.length}`;
   renderTargetWithActiveChar();
 }
 
