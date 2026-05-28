@@ -1,21 +1,24 @@
+require("dotenv").config();
+
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
+const {
+  saveSample,
+  fetchAllSamples,
+  useSupabase,
+  getStorageInfo,
+} = require("./lib/dataset");
 
 const HOST = "0.0.0.0";
 const PORT = Number(process.env.PORT || 3000);
+const EXPORT_TOKEN = process.env.EXPORT_TOKEN || "";
 
 const ROOT_DIR = __dirname;
 const PUBLIC_DIR = path.join(ROOT_DIR, "public");
-const DATA_DIR = path.join(ROOT_DIR, "data");
-const DATASET_FILE = path.join(DATA_DIR, "typo_dataset.jsonl");
 const SENTENCES_FILE = path.join(ROOT_DIR, "sentences.txt");
 const issuedSentences = new Set();
-
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
 
 function loadSentences() {
   if (!fs.existsSync(SENTENCES_FILE)) {
@@ -34,7 +37,6 @@ function loadSentences() {
 function getNextSentenceWithoutRepeat(sentences) {
   if (sentences.length === 0) return null;
 
-  // На случай, если файл предложений изменился, вычищаем устаревшие метки.
   const sentenceSet = new Set(sentences);
   for (const issued of issuedSentences) {
     if (!sentenceSet.has(issued)) {
@@ -65,6 +67,15 @@ function sendJson(res, statusCode, payload) {
   res.end(json);
 }
 
+function sendDownload(res, statusCode, body, filename, contentType) {
+  res.writeHead(statusCode, {
+    "Content-Type": contentType,
+    "Content-Disposition": `attachment; filename="${filename}"`,
+    "Content-Length": Buffer.byteLength(body, "utf8"),
+  });
+  res.end(body, "utf8");
+}
+
 function parseBody(req) {
   return new Promise((resolve, reject) => {
     let data = "";
@@ -83,11 +94,6 @@ function parseBody(req) {
     });
     req.on("error", reject);
   });
-}
-
-function saveSample(entry) {
-  const line = JSON.stringify(entry) + "\n";
-  fs.appendFileSync(DATASET_FILE, line, "utf8");
 }
 
 function getContentType(filePath) {
@@ -122,6 +128,11 @@ function serveStatic(reqPath, res) {
   res.end(content);
 }
 
+function isExportAuthorized(url) {
+  if (!EXPORT_TOKEN) return false;
+  return url.searchParams.get("token") === EXPORT_TOKEN;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
@@ -141,6 +152,35 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/export-dataset") {
+    if (!isExportAuthorized(url)) {
+      sendJson(res, 401, { error: "Unauthorized" });
+      return;
+    }
+
+    try {
+      const format = url.searchParams.get("format") || "json";
+      const rows = await fetchAllSamples();
+
+      if (format === "jsonl") {
+        const body = rows.map((row) => JSON.stringify(row)).join("\n") + (rows.length ? "\n" : "");
+        sendDownload(res, 200, body, "typo_dataset.jsonl", "application/x-ndjson; charset=utf-8");
+        return;
+      }
+
+      sendDownload(
+        res,
+        200,
+        JSON.stringify(rows, null, 2),
+        "typo_dataset.json",
+        "application/json; charset=utf-8"
+      );
+    } catch (err) {
+      sendJson(res, 500, { error: err.message || "Export failed" });
+    }
+    return;
+  }
+
   if (req.method === "POST" && url.pathname === "/api/submit") {
     try {
       const body = await parseBody(req);
@@ -157,8 +197,8 @@ const server = http.createServer(async (req, res) => {
         original,
         typed,
       };
-      saveSample(entry);
-      sendJson(res, 200, { ok: true });
+      const result = await saveSample(entry);
+      sendJson(res, 200, { ok: true, ...result });
     } catch (err) {
       sendJson(res, 400, { error: err.message || "Bad request" });
     }
@@ -174,6 +214,18 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
+  const info = getStorageInfo();
   console.log(`Game running at http://${HOST}:${PORT}`);
-  console.log(`Dataset file: ${DATASET_FILE}`);
+  console.log(`Dataset storage: ${info.storage}`);
+  if (info.datasetFile) {
+    console.log(`Local fallback file: ${info.datasetFile}`);
+  }
+  if (!useSupabase()) {
+    console.warn(
+      "Supabase not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env"
+    );
+  }
+  if (EXPORT_TOKEN) {
+    console.log("Export enabled: GET /api/export-dataset?token=...&format=json|jsonl");
+  }
 });
