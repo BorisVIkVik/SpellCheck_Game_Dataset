@@ -50,3 +50,10 @@ curl -o typo_dataset.json \
 ```
 
 Данные также в **Table Editor**: `typo_samples`, `source_sentences`.
+
+## Анонимный player_id
+
+У каждого браузера свой UUID в `localStorage` — после перезагрузки страницы он сохраняется.
+Поле `player_id` пишется в `typo_samples` при каждой отправке.
+
+Если таблица уже создана, выполни `supabase/migration_add_player_id.sql`.

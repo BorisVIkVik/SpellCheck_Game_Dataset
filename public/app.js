@@ -6,6 +6,29 @@ const targetEl = document.getElementById("target");
 const statusEl = document.getElementById("status");
 const nextBtn = document.getElementById("nextBtn");
 const gameEl = document.getElementById("game");
+const PLAYER_ID_KEY = "typo_game_player_id";
+
+function createPlayerId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function getOrCreatePlayerId() {
+  let id = localStorage.getItem(PLAYER_ID_KEY);
+  if (!id) {
+    id = createPlayerId();
+    localStorage.setItem(PLAYER_ID_KEY, id);
+  }
+  return id;
+}
+
+const playerId = getOrCreatePlayerId();
 
 function focusGame() {
   gameEl.focus({ preventScroll: true });
@@ -84,6 +107,7 @@ async function submitTypedSentence() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        playerId,
         original: currentSentence,
         typed: typedSentence,
       }),

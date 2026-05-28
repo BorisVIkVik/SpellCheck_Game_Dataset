@@ -128,6 +128,16 @@ function isAdminAuthorized(url) {
   return url.searchParams.get("token") === EXPORT_TOKEN;
 }
 
+function normalizePlayerId(value) {
+  if (typeof value !== "string") return null;
+  const id = value.trim();
+  if (!id) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    return null;
+  }
+  return id;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
@@ -208,14 +218,20 @@ const server = http.createServer(async (req, res) => {
       const body = await parseBody(req);
       const original = typeof body.original === "string" ? body.original : "";
       const typed = typeof body.typed === "string" ? body.typed : "";
+      const playerId = normalizePlayerId(body.playerId);
 
       if (!original) {
         sendJson(res, 400, { error: "Field 'original' is required" });
         return;
       }
+      if (!playerId) {
+        sendJson(res, 400, { error: "Field 'playerId' (UUID) is required" });
+        return;
+      }
 
       const entry = {
         createdAt: new Date().toISOString(),
+        playerId,
         original,
         typed,
       };
