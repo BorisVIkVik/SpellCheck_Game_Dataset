@@ -57,3 +57,9 @@ curl -o typo_dataset.json \
 Поле `player_id` пишется в `typo_samples` при каждой отправке.
 
 Если таблица уже создана, выполни `supabase/migration_add_player_id.sql`.
+
+## Тип устройства (mobile / desktop / tablet)
+
+При каждой отправке сохраняется `device_type` (определяется в браузере; на сервере при необходимости уточняется по `User-Agent`).
+
+Миграция для существующей БД: `supabase/migration_add_device_type.sql`.

@@ -33,6 +33,25 @@ function getOrCreatePlayerId() {
 
 const playerId = getOrCreatePlayerId();
 
+function detectDeviceType() {
+  const ua = navigator.userAgent || "";
+  if (/iPad|Tablet|PlayBook|Silk/i.test(ua)) {
+    return "tablet";
+  }
+  if (/Android/i.test(ua) && !/Mobile/i.test(ua)) {
+    return "tablet";
+  }
+  if (/Android|iPhone|iPod|Mobile|IEMobile|Opera Mini/i.test(ua)) {
+    return "mobile";
+  }
+  if (window.matchMedia("(max-width: 900px)").matches && navigator.maxTouchPoints > 0) {
+    return "mobile";
+  }
+  return "desktop";
+}
+
+const deviceType = detectDeviceType();
+
 function focusTyping() {
   typingInput.focus({ preventScroll: true });
 }
@@ -149,6 +168,7 @@ async function submitTypedSentence() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         playerId,
+        deviceType,
         original: currentSentence,
         typed: typedSentence,
       }),

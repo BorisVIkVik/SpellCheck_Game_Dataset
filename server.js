@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
 const { saveSample, fetchAllSamples, getStorageInfo } = require("./lib/dataset");
+const { normalizeDeviceType } = require("./lib/deviceType");
 const { useSupabase } = require("./lib/supabase");
 const { loadSentenceTexts, importText } = require("./lib/sentences");
 
@@ -229,9 +230,15 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      const deviceType = normalizeDeviceType(
+        body.deviceType,
+        req.headers["user-agent"]
+      );
+
       const entry = {
         createdAt: new Date().toISOString(),
         playerId,
+        deviceType,
         original,
         typed,
       };

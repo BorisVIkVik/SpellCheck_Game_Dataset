@@ -4,12 +4,16 @@ create table if not exists public.typo_samples (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
   player_id text,
+  device_type text,
   original text not null,
   typed text not null default ''
 );
 
 create index if not exists typo_samples_player_id_idx
   on public.typo_samples (player_id);
+
+create index if not exists typo_samples_device_type_idx
+  on public.typo_samples (device_type);
 
 create index if not exists typo_samples_created_at_idx
   on public.typo_samples (created_at desc);
