@@ -5,6 +5,11 @@ let isSubmitting = false;
 const targetEl = document.getElementById("target");
 const statusEl = document.getElementById("status");
 const nextBtn = document.getElementById("nextBtn");
+const gameEl = document.getElementById("game");
+
+function focusGame() {
+  gameEl.focus({ preventScroll: true });
+}
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -64,6 +69,7 @@ async function loadNextSentence() {
     currentSentence = data.sentence || "";
     renderMasked();
     setStatus("Печатай. Исправление назад отключено.");
+    focusGame();
   } catch (err) {
     setStatus(err.message, true);
   }
@@ -92,8 +98,15 @@ async function submitTypedSentence() {
   }
 }
 
-document.addEventListener("keydown", async (event) => {
+document.addEventListener(
+  "keydown",
+  async (event) => {
   if (!currentSentence || isSubmitting) return;
+
+  // Пробел не должен нажимать сфокусированную кнопку «Следующее предложение».
+  if (event.key === " " || event.code === "Space") {
+    event.preventDefault();
+  }
 
   if (event.key === "Backspace" || event.key === "Delete") {
     // Специально блокируем удаление уже введенных символов.
@@ -123,8 +136,15 @@ document.addEventListener("keydown", async (event) => {
   if (typedSentence.length === currentSentence.length) {
     await submitTypedSentence();
   }
-});
+  },
+  true
+);
 
-nextBtn.addEventListener("click", loadNextSentence);
+// Клик по кнопке не оставляет на ней фокус (иначе пробел снова её нажимает).
+nextBtn.addEventListener("mousedown", (event) => event.preventDefault());
+nextBtn.addEventListener("click", () => {
+  loadNextSentence();
+  focusGame();
+});
 
 loadNextSentence();

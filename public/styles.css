@@ -99,6 +99,19 @@ button:hover {
   background: #3d68ef;
 }
 
+button:focus {
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid #9fb1dd;
+  outline-offset: 2px;
+}
+
+.app:focus {
+  outline: none;
+}
+
 .status {
   margin: 10px 0 0;
   min-height: 1.2rem;
