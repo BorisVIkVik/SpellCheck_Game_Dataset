@@ -16,9 +16,22 @@
         </p>
       </section>
 
-      <section class="card">
-        <p class="label">Перепечатай предложение (можно смотреть):</p>
-        <p id="target" class="target">Загрузка...</p>
+      <section class="card typing-card" id="typingCard">
+        <p class="label">Перепечатай предложение (нажми на текст для клавиатуры):</p>
+        <div class="target-wrap">
+          <p id="target" class="target">Загрузка...</p>
+          <input
+            id="typingInput"
+            class="typing-input"
+            type="text"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            enterkeyhint="done"
+            aria-label="Ввод текста"
+          />
+        </div>
       </section>
 
       <section class="card">

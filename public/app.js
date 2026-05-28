@@ -1,11 +1,14 @@
 let currentSentence = "";
 let typedSentence = "";
 let isSubmitting = false;
+let isComposing = false;
 
 const targetEl = document.getElementById("target");
 const statusEl = document.getElementById("status");
 const nextBtn = document.getElementById("nextBtn");
 const gameEl = document.getElementById("game");
+const typingInput = document.getElementById("typingInput");
+const typingCard = document.getElementById("typingCard");
 const PLAYER_ID_KEY = "typo_game_player_id";
 
 function createPlayerId() {
@@ -30,8 +33,12 @@ function getOrCreatePlayerId() {
 
 const playerId = getOrCreatePlayerId();
 
-function focusGame() {
-  gameEl.focus({ preventScroll: true });
+function focusTyping() {
+  typingInput.focus({ preventScroll: true });
+}
+
+function clearTypingInput() {
+  typingInput.value = "";
 }
 
 function setStatus(message, isError = false) {
@@ -77,12 +84,46 @@ function isLatinLetter(ch) {
   return /^[A-Za-z]$/.test(ch);
 }
 
+async function appendCharacter(ch) {
+  if (!currentSentence || isSubmitting) return;
+  if (typedSentence.length >= currentSentence.length) return;
+
+  if (ch === "\n") {
+    await submitTypedSentence();
+    return;
+  }
+
+  if (isLatinLetter(ch)) {
+    setStatus("Включи русскую раскладку клавиатуры.", true);
+    return;
+  }
+
+  typedSentence += ch;
+  renderMasked();
+
+  if (typedSentence.length === currentSentence.length) {
+    await submitTypedSentence();
+  }
+}
+
+async function processInputValue() {
+  const value = typingInput.value;
+  clearTypingInput();
+  if (!value || !currentSentence || isSubmitting) return;
+
+  for (const ch of value) {
+    if (typedSentence.length >= currentSentence.length) break;
+    await appendCharacter(ch);
+  }
+}
+
 async function loadNextSentence() {
   if (isSubmitting) return;
 
   setStatus("Загрузка предложения...");
   typedSentence = "";
   currentSentence = "";
+  clearTypingInput();
   renderMasked();
 
   try {
@@ -92,7 +133,7 @@ async function loadNextSentence() {
     currentSentence = data.sentence || "";
     renderMasked();
     setStatus("Печатай. Исправление назад отключено.");
-    focusGame();
+    focusTyping();
   } catch (err) {
     setStatus(err.message, true);
   }
@@ -125,50 +166,70 @@ async function submitTypedSentence() {
 document.addEventListener(
   "keydown",
   async (event) => {
-  if (!currentSentence || isSubmitting) return;
+    if (!currentSentence || isSubmitting) return;
+    if (document.activeElement === typingInput) return;
 
-  // Пробел не должен нажимать сфокусированную кнопку «Следующее предложение».
-  if (event.key === " " || event.code === "Space") {
+    if (event.key === " " || event.code === "Space") {
+      event.preventDefault();
+    }
+
+    if (event.key === "Backspace" || event.key === "Delete") {
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      await submitTypedSentence();
+      return;
+    }
+
+    if (event.key.length !== 1) return;
+    if (typedSentence.length >= currentSentence.length) return;
+
     event.preventDefault();
-  }
-
-  if (event.key === "Backspace" || event.key === "Delete") {
-    // Специально блокируем удаление уже введенных символов.
-    event.preventDefault();
-    return;
-  }
-
-  if (event.key === "Enter") {
-    event.preventDefault();
-    await submitTypedSentence();
-    return;
-  }
-
-  if (event.key.length !== 1) return;
-
-  if (typedSentence.length >= currentSentence.length) return;
-
-  if (isLatinLetter(event.key)) {
-    event.preventDefault();
-    setStatus("Включи русскую раскладку клавиатуры.", true);
-    return;
-  }
-
-  typedSentence += event.key;
-  renderMasked();
-
-  if (typedSentence.length === currentSentence.length) {
-    await submitTypedSentence();
-  }
+    await appendCharacter(event.key);
   },
   true
 );
 
-// Клик по кнопке не оставляет на ней фокус (иначе пробел снова её нажимает).
+typingInput.addEventListener("compositionstart", () => {
+  isComposing = true;
+});
+
+typingInput.addEventListener("compositionend", () => {
+  isComposing = false;
+  void processInputValue();
+});
+
+typingInput.addEventListener("input", () => {
+  if (isComposing) return;
+  void processInputValue();
+});
+
+typingInput.addEventListener("keydown", (event) => {
+  if (event.key === "Backspace" || event.key === "Delete") {
+    event.preventDefault();
+    clearTypingInput();
+    return;
+  }
+  if (event.key === "Enter") {
+    event.preventDefault();
+    submitTypedSentence();
+  }
+});
+
+typingInput.addEventListener("paste", (event) => {
+  event.preventDefault();
+});
+
+typingCard.addEventListener("click", () => {
+  focusTyping();
+});
+
 nextBtn.addEventListener("mousedown", (event) => event.preventDefault());
 nextBtn.addEventListener("click", () => {
   loadNextSentence();
-  focusGame();
 });
 
 loadNextSentence();
