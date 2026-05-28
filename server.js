@@ -11,6 +11,7 @@ const PUBLIC_DIR = path.join(ROOT_DIR, "public");
 const DATA_DIR = path.join(ROOT_DIR, "data");
 const DATASET_FILE = path.join(DATA_DIR, "typo_dataset.jsonl");
 const SENTENCES_FILE = path.join(ROOT_DIR, "sentences.txt");
+const issuedSentences = new Set();
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -28,6 +29,31 @@ function loadSentences() {
     .filter(Boolean);
 
   return lines;
+}
+
+function getNextSentenceWithoutRepeat(sentences) {
+  if (sentences.length === 0) return null;
+
+  // На случай, если файл предложений изменился, вычищаем устаревшие метки.
+  const sentenceSet = new Set(sentences);
+  for (const issued of issuedSentences) {
+    if (!sentenceSet.has(issued)) {
+      issuedSentences.delete(issued);
+    }
+  }
+
+  if (issuedSentences.size >= sentences.length) {
+    issuedSentences.clear();
+  }
+
+  const available = sentences.filter((sentence) => !issuedSentences.has(sentence));
+  if (available.length === 0) {
+    return null;
+  }
+
+  const sentence = available[Math.floor(Math.random() * available.length)];
+  issuedSentences.add(sentence);
+  return sentence;
 }
 
 function sendJson(res, statusCode, payload) {
@@ -106,7 +132,11 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const sentence = sentences[Math.floor(Math.random() * sentences.length)];
+    const sentence = getNextSentenceWithoutRepeat(sentences);
+    if (!sentence) {
+      sendJson(res, 500, { error: "Failed to pick next sentence" });
+      return;
+    }
     sendJson(res, 200, { sentence });
     return;
   }

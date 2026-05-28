@@ -45,6 +45,10 @@ function renderMasked() {
   renderTargetWithActiveChar();
 }
 
+function isLatinLetter(ch) {
+  return /^[A-Za-z]$/.test(ch);
+}
+
 async function loadNextSentence() {
   if (isSubmitting) return;
 
@@ -106,6 +110,12 @@ document.addEventListener("keydown", async (event) => {
   if (event.key.length !== 1) return;
 
   if (typedSentence.length >= currentSentence.length) return;
+
+  if (isLatinLetter(event.key)) {
+    event.preventDefault();
+    setStatus("Включи русскую раскладку клавиатуры.", true);
+    return;
+  }
 
   typedSentence += event.key;
   renderMasked();
